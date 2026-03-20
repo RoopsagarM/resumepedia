@@ -143,6 +143,21 @@ def clean_json(raw: str) -> str:
     if start != -1 and end != -1: raw = raw[start:end+1]
     raw = raw.replace("\u2018","'").replace("\u2019","'").replace("\u201c",'"').replace("\u201d",'"')
     raw = re.sub(r",\s*([}\]])", r"\1", raw)
+    # Additional cleanup for LLM output issues
+    cleaned = []
+    in_string = False
+    i = 0
+    while i < len(raw):
+        c = raw[i]
+        if c == '"' and (i == 0 or raw[i-1] != '\\'):
+            in_string = not in_string
+        if in_string and c in '\n\r\t' and (i == 0 or raw[i-1] != '\\'):
+            cleaned.append(' ')
+        else:
+            cleaned.append(c)
+        i += 1
+    raw = ''.join(cleaned)
+    raw = re.sub(r",\s*([}\]])", r"\1", raw)
     return raw.strip()
 
 def resume_to_text(r: dict) -> str:
