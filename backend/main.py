@@ -28,7 +28,8 @@ app.add_middleware(
 )
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+GMAIL_USER = os.getenv("GMAIL_USER", "")
+GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD", "")
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 
 # ── Database ──────────────────────────────────────────────────────────────
@@ -88,8 +89,15 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
 # ── Email ─────────────────────────────────────────────────────────────────
 
 def send_verification_email(email: str, code: str, name: str = ""):
-    if not RESEND_API_KEY:
-        raise Exception("RESEND_API_KEY not set")
+    import smtplib
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.text import MIMEText
+
+    gmail_user = os.getenv("GMAIL_USER", "")
+    gmail_pass = os.getenv("GMAIL_APP_PASSWORD", "")
+    if not gmail_user or not gmail_pass:
+        raise Exception("GMAIL_USER or GMAIL_APP_PASSWORD not set in .env")
+
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f8fafc;border-radius:16px">
       <div style="background:#2563eb;border-radius:12px;padding:24px;text-align:center;margin-bottom:24px">
@@ -105,15 +113,16 @@ def send_verification_email(email: str, code: str, name: str = ""):
         <p style="color:#94a3b8;font-size:12px;margin:0">If you didn't request this, ignore this email.</p>
       </div>
     </div>"""
-    resp = requests.post(
-        "https://api.resend.com/emails",
-        headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
-        json={"from":"Resumepedia <onboarding@resend.dev>","to":[email],
-              "subject":f"{code} — Your Resumepedia verification code","html":html},
-        timeout=15
-    )
-    if resp.status_code not in (200,201):
-        raise Exception(f"Email failed: {resp.text[:200]}")
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"{code} — Your Resumepedia verification code"
+    msg["From"] = f"Resumepedia <{gmail_user}>"
+    msg["To"] = email
+    msg.attach(MIMEText(html, "html"))
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        server.login(gmail_user, gmail_pass)
+        server.sendmail(gmail_user, email, msg.as_string())
 
 # ── LLM ───────────────────────────────────────────────────────────────────
 
