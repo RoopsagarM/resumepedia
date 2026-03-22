@@ -93,10 +93,10 @@ def send_verification_email(email: str, code: str, name: str = ""):
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
 
-    gmail_user = os.getenv("GMAIL_USER", "")
-    gmail_pass = os.getenv("GMAIL_APP_PASSWORD", "")
-    if not gmail_user or not gmail_pass:
-        raise Exception("GMAIL_USER or GMAIL_APP_PASSWORD not set in .env")
+    brevo_login = os.getenv("BREVO_SMTP_LOGIN", "")
+    brevo_pass = os.getenv("BREVO_SMTP_PASSWORD", "")
+    if not brevo_login or not brevo_pass:
+        raise Exception("BREVO_SMTP_LOGIN or BREVO_SMTP_PASSWORD not set in .env")
 
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f8fafc;border-radius:16px">
@@ -110,22 +110,22 @@ def send_verification_email(email: str, code: str, name: str = ""):
         <div style="background:#eff6ff;border:2px dashed #3b82f6;border-radius:12px;padding:20px;text-align:center;margin-bottom:24px">
           <p style="margin:0;font-size:42px;font-weight:800;letter-spacing:12px;color:#1d4ed8;font-family:monospace">{code}</p>
         </div>
-        <p style="color:#94a3b8;font-size:12px;margin:0">If you didn't request this, ignore this email.</p>
+        <p style="color:#94a3b8;font-size:12px;margin:0">If you did not request this, ignore this email.</p>
       </div>
     </div>"""
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"{code} — Your Resumepedia verification code"
-    msg["From"] = f"Resumepedia <{gmail_user}>"
+    msg["From"] = "Resumepedia <mangineni1411@gmail.com>"
     msg["To"] = email
     msg.attach(MIMEText(html, "html"))
 
-    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+    with smtplib.SMTP("smtp-relay.brevo.com", 587) as server:
         server.ehlo()
         server.starttls()
         server.ehlo()
-        server.login(gmail_user, gmail_pass)
-        server.sendmail(gmail_user, email, msg.as_string())
+        server.login(brevo_login, brevo_pass)
+        server.sendmail("mangineni1411@gmail.com", email, msg.as_string())
 
 # ── LLM ───────────────────────────────────────────────────────────────────
 
