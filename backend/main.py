@@ -89,14 +89,9 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
 # ── Email ─────────────────────────────────────────────────────────────────
 
 def send_verification_email(email: str, code: str, name: str = ""):
-    import smtplib
-    from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
-
-    brevo_login = os.getenv("BREVO_SMTP_LOGIN", "")
-    brevo_pass = os.getenv("BREVO_SMTP_PASSWORD", "")
-    if not brevo_login or not brevo_pass:
-        raise Exception("BREVO_SMTP_LOGIN or BREVO_SMTP_PASSWORD not set in .env")
+    brevo_api_key = os.getenv("BREVO_API_KEY", "")
+    if not brevo_api_key:
+        raise Exception("BREVO_API_KEY not set in environment")
 
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f8fafc;border-radius:16px">
@@ -114,18 +109,22 @@ def send_verification_email(email: str, code: str, name: str = ""):
       </div>
     </div>"""
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"{code} — Your Resumepedia verification code"
-    msg["From"] = "Resumepedia <mangineni1411@gmail.com>"
-    msg["To"] = email
-    msg.attach(MIMEText(html, "html"))
-
-    with smtplib.SMTP("smtp-relay.brevo.com", 587) as server:
-        server.ehlo()
-        server.starttls()
-        server.ehlo()
-        server.login(brevo_login, brevo_pass)
-        server.sendmail("mangineni1411@gmail.com", email, msg.as_string())
+    resp = requests.post(
+        "https://api.brevo.com/v3/smtp/email",
+        headers={
+            "api-key": brevo_api_key,
+            "Content-Type": "application/json"
+        },
+        json={
+            "sender": {"name": "Resumepedia", "email": "mangineni1411@gmail.com"},
+            "to": [{"email": email}],
+            "subject": f"{code} — Your Resumepedia verification code",
+            "htmlContent": html
+        },
+        timeout=15
+    )
+    if resp.status_code not in (200, 201):
+        raise Exception(f"Brevo API error {resp.status_code}: {resp.text[:200]}")
 
 # ── LLM ───────────────────────────────────────────────────────────────────
 
