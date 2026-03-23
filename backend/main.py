@@ -197,15 +197,50 @@ def agent_parser(raw_text):
     return json.loads(clean_json(r))
 
 def agent_writer(resume, jd=""):
-    jd_s = f"\nTarget Job:\n{jd}" if jd else ""
-    r = llm(f"Rewrite this resume professionally. Return ONLY raw JSON.\n\n{resume_to_text(resume)}{jd_s}\n\nRules:\n- Summary: 2-3 sentences, no 'I'\n- Every bullet: action verb + achievement + metric\n- Keep all names/dates\n\nReturn ONLY:\n{SCHEMA}",
-            system="You are an elite resume writer.")
+    jd_s = f"\nTarget Job Description:\n{jd}\nAlign language and keywords to this role." if jd else ""
+    r = llm(f"""You are an elite resume writer with 20 years of experience helping candidates land jobs at top companies like Google, Amazon, and McKinsey.
+
+Rewrite this resume to be exceptional. Return ONLY raw JSON, no markdown.
+
+{resume_to_text(resume)}
+{jd_s}
+
+Strict rules:
+- Summary: 3 powerful sentences. Open with a strong professional identity statement. Highlight unique value. End with career impact. NO "I" anywhere.
+- Every bullet MUST follow: [Strong Action Verb] + [What you did] + [Quantified Result]. Example: "Architected a microservices platform serving 2M+ daily users, reducing latency by 40%"
+- Use powerful verbs: Spearheaded, Architected, Pioneered, Orchestrated, Accelerated, Transformed, Delivered, Drove, Optimized
+- Add realistic metrics where missing: team sizes, percentages, dollar amounts, time savings, user counts
+- Keep all names, companies, dates EXACTLY as given
+- Skills: reorder by relevance, add adjacent skills that are implied
+
+Return ONLY this JSON:
+{SCHEMA}""",
+            system="You are an elite resume writer who has helped thousands of candidates land jobs at top companies. You write resumes that get interviews. You never use weak language.")
     return json.loads(clean_json(r))
 
 def agent_critic(resume, jd=""):
-    jd_s = f"\nJob:\n{jd}" if jd else ""
-    r = llm(f"Analyze this resume critically. Return ONLY raw JSON.\n\n{resume_to_text(resume)}{jd_s}\n\nReturn ONLY:\n{{\"overall_score\":0-100,\"ats_score\":0-100,\"scores\":{{\"impact\":0-100,\"clarity\":0-100,\"skills_match\":0-100,\"formatting\":0-100}},\"strengths\":[\"...\"],\"improvements\":[\"...\"],\"missing_keywords\":[\"...\"],\"verdict\":\"one sentence\"}}",
-            system="You are a strict resume critic.", temperature=0.3)
+    jd_s = f"\nJob Description:\n{jd}" if jd else ""
+    r = llm(
+        f"""You are a senior hiring manager at a Fortune 500 company who has reviewed 10,000+ resumes. Be brutally honest and specific.
+
+Analyze this resume and return ONLY raw JSON, no markdown.
+
+{resume_to_text(resume)}
+{jd_s}
+
+Score each dimension 0-100:
+- overall_score: Overall quality and likelihood of getting an interview
+- ats_score: How well it passes Applicant Tracking Systems
+- impact: Are achievements quantified with real results?
+- clarity: Easy to understand? Clear career progression?
+- skills_match: How well skills match modern industry expectations?
+- formatting: Would it impress a recruiter?
+
+Return ONLY this JSON with no extra text:
+{{"overall_score":75,"ats_score":70,"scores":{{"impact":70,"clarity":80,"skills_match":75,"formatting":85}},"strengths":["specific strength 1","specific strength 2"],"improvements":["specific fix 1","specific fix 2","specific fix 3"],"missing_keywords":["keyword1","keyword2"],"verdict":"one honest sentence"}}""",
+        system="You are a brutally honest senior hiring manager. Give specific, actionable feedback.",
+        temperature=0.3
+    )
     return json.loads(clean_json(r))
 
 def agent_tailor(resume, jd):
@@ -215,9 +250,25 @@ def agent_tailor(resume, jd):
     return json.loads(clean_json(r))
 
 def agent_cover_letter(resume, jd=""):
-    jd_s = f"\nJD:\n{jd}" if jd else "\nWrite a strong general cover letter."
-    r = llm(f"Write a cover letter. Return ONLY raw JSON.\n\nResume:\n{resume_to_text(resume)}{jd_s}\n\nReturn ONLY:\n{{\"subject\":\"Application for [Role] — [Name]\",\"body\":\"full cover letter\"}}",
-            system="You are an expert cover letter writer.")
+    jd_s = f"\nJob Description:\n{jd}" if jd else "\nWrite a powerful general cover letter showcasing their strongest achievements."
+    r = llm(
+        f"""You are an expert cover letter writer. Write a compelling, personalized cover letter.
+
+Resume:
+{resume_to_text(resume)}
+{jd_s}
+
+Rules:
+- Paragraph 1: Powerful hook. Why this role excites you. NOT "I am writing to apply..."
+- Paragraph 2: 2-3 specific achievements with numbers. Show impact.
+- Paragraph 3: Why this company specifically. Show research and cultural fit.
+- Paragraph 4: Confident close. NOT "I hope to hear from you."
+- Tone: Confident, professional, human. 250-350 words total.
+
+Return ONLY this JSON with no extra text:
+{{"subject":"Application for [Role] — [Name]","body":"full cover letter with paragraph breaks"}}""",
+        system="You are an expert cover letter writer who writes letters that make hiring managers excited."
+    )
     return json.loads(clean_json(r))
 
 def agent_orchestrator(resume, jd="", mode="generate"):
